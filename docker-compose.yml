@@ -1,0 +1,170 @@
+name: kepler-dev
+
+# Single docker-compose for the entire dev stack:
+# Postgres, Redis, MailHog, API (FastAPI), Web (Next.js), ML (Triton + model store).
+#
+# Bring up:    docker compose -f docker-compose.yml --profile ml up
+# Bring down:  docker compose -f docker-compose.yml --profile ml down
+# Reset data:  docker compose -f docker-compose.yml --profile ml down -v
+#
+# This is intentionally self-contained. The web app reads NEXT_PUBLIC_API_BASE_URL
+# from the .env; we default to http://localhost:8000 so it works on the host
+# without extra configuration.
+
+x-base-env: &base-env
+  DATABASE_URL: postgresql+asyncpg://kepler:kepler@postgres:5432/kepler
+  DATABASE_URL_SYNC: postgresql+psycopg2://kepler:kepler@postgres:5432/kepler
+  REDIS_URL: redis://redis:6379/0
+  LOG_FORMAT: console
+  HTTP_CORS_ORIGINS: http://localhost:3000
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: kepler-postgres
+    environment:
+      POSTGRES_USER: kepler
+      POSTGRES_PASSWORD: kepler
+      POSTGRES_DB: kepler
+    ports:
+      - "5432:5432"
+    volumes:
+      - kepler-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kepler -d kepler"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: kepler-redis
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: kepler-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  migrate:
+    build:
+      context: ./services/api
+      dockerfile: Dockerfile
+    container_name: kepler-migrate
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      <<: *base-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: ./services/api
+      dockerfile: Dockerfile
+    container_name: kepler-api
+    command: ["uvicorn", "kepler.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    environment:
+      <<: *base-env
+      APP_ENV: development
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./services/api/src:/app/src
+      - ./services/api/migrations:/app/migrations
+      - kepler-jwt-secrets:/app/secrets
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz').status == 200 else 1)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  web:
+    image: node:20-alpine
+    container_name: kepler-web
+    working_dir: /app
+    command: sh -c "corepack enable && pnpm install --frozen-lockfile=false && pnpm dev"
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./apps/web:/app
+      - ./packages:/root/packages
+      - kepler-pnpm-store:/root/.local/share/pnpm/store
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      api:
+        condition: service_started
+
+  # ML platform. Profile `ml` so the heavy stack only comes up when needed.
+  triton:
+    image: nvcr.io/nvidia/tritonserver:24.10-py3
+    container_name: kepler-triton
+    profiles: ["ml", "all"]
+    command: >
+      tritonserver
+        --model-repository=/models
+        --grpc-port=8001
+        --http-port=8000
+        --metrics-port=8002
+        --log-verbose=1
+    environment:
+      NVIDIA_VISIBLE_DEVICES: "all"
+    ports:
+      - "8000:8000"   # collides with API; map to 8100 on host if used together
+      - "8001:8001"
+      - "8002:8002"
+    volumes:
+      - ./deploy/triton/models:/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: ["gpu"]
+    depends_on:
+      - api
+
+  # Local model store. Production uses GCS/S3; this is a minio instance.
+  minio:
+    image: minio/minio:latest
+    container_name: kepler-minio
+    profiles: ["ml", "all"]
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: kepler
+      MINIO_ROOT_PASSWORD: kepler-secret
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - kepler-minio-data:/data
+
+volumes:
+  kepler-pg-data:
+  kepler-jwt-secrets:
+  kepler-pnpm-store:
+  kepler-minio-data:

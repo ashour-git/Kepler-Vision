@@ -1,0 +1,83 @@
+name: kepler-api-dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: kepler-postgres
+    environment:
+      POSTGRES_USER: kepler
+      POSTGRES_PASSWORD: kepler
+      POSTGRES_DB: kepler
+    ports:
+      - "5432:5432"
+    volumes:
+      - kepler-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kepler -d kepler"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: kepler-redis
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: kepler-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kepler-migrate
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      DATABASE_URL_SYNC: postgresql+psycopg2://kepler:kepler@postgres:5432/kepler
+      DATABASE_URL: postgresql+asyncpg://kepler:kepler@postgres:5432/kepler
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kepler-api
+    command: ["uvicorn", "kepler.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    environment:
+      APP_ENV: development
+      DATABASE_URL: postgresql+asyncpg://kepler:kepler@postgres:5432/kepler
+      DATABASE_URL_SYNC: postgresql+psycopg2://kepler:kepler@postgres:5432/kepler
+      REDIS_URL: redis://redis:6379/0
+      LOG_FORMAT: console
+      HTTP_CORS_ORIGINS: http://localhost:3000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src:/app/src
+      - ./migrations:/app/migrations
+      - kepler-jwt-secrets:/app/secrets
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  kepler-pg-data:
+  kepler-jwt-secrets:

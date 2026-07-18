@@ -1,0 +1,131 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kepler-api"
+version = "0.1.0"
+description = "Kepler Vision API - FastAPI backend"
+requires-python = ">=3.12"
+readme = "README.md"
+license = { text = "Proprietary" }
+authors = [{ name = "Kepler Vision" }]
+dependencies = [
+    "fastapi[standard]>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.9.0",
+    "pydantic-settings>=2.5.0",
+    "sqlalchemy[asyncio]>=2.0.36",
+    "alembic>=1.13.0",
+    "asyncpg>=0.30.0",
+    "psycopg2-binary>=2.9.9",
+    "redis[hiredis]>=5.2.0",
+    "argon2-cffi>=23.1.0",
+    "pyjwt[crypto]>=2.9.0",
+    "cryptography>=43.0.0",
+    "structlog>=24.4.0",
+    "opentelemetry-api>=1.27.0",
+    "opentelemetry-sdk>=1.27.0",
+    "opentelemetry-exporter-otlp>=1.27.0",
+    "opentelemetry-instrumentation-fastapi>=0.48b0",
+    "opentelemetry-instrumentation-sqlalchemy>=0.48b0",
+    "opentelemetry-instrumentation-redis>=0.48b0",
+    "prometheus-client>=0.21.0",
+    "python-multipart>=0.0.12",
+    "email-validator>=2.2.0",
+    "orjson>=3.10.7",
+    "httpx>=0.27.0",
+    "ulid-py>=1.1.0",
+    "python-jose[cryptography]>=3.3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=5.0.0",
+    "httpx>=0.27.0",
+    "mypy>=1.11.0",
+    "ruff>=0.7.0",
+    "black>=24.0.0",
+    "freezegun>=1.5.0",
+    "faker>=30.0.0",
+    "asgi-lifespan>=2.1.0",
+    "testcontainers[postgres,redis]>=4.8.0",
+]
+
+[project.scripts]
+kepler-api = "kepler.main:run"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"kepler" = ["**/*.py", "**/*.j2"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra -q --strict-markers"
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning:passlib.*",
+    "ignore::DeprecationWarning:pydantic.*",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["**/migrations/*", "**/alembic/*"]
+
+[tool.ruff.lint]
+select = [
+    "E", "F", "W", "I", "N", "UP", "B", "C4", "SIM", "RUF", "ASYNC", "S", "TCH", "PTH", "ERA", "PL", "TRY",
+]
+ignore = [
+    "E501",  # line length (handled by formatter)
+    "B008",  # function call in default argument (FastAPI pattern)
+    "TRY003",  # long messages outside exception class
+    "PLR0913",  # too many arguments (acceptable in services)
+    "PLR2004",  # magic value (acceptable)
+    "S101",  # assert (used in tests)
+    "S104",  # hardcoded bind to all interfaces (acceptable in dev)
+    "S105",  # hardcoded password string (false positive in tests)
+    "S106",  # hardcoded password string (false positive in tests)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S", "PLR0913", "PLR2004", "ARG", "FBT"]
+"**/migrations/**/*.py" = ["E", "F", "I", "N", "UP", "B", "C4", "SIM", "RUF", "ASYNC", "S", "TCH", "PTH", "ERA", "PL", "TRY"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_configs = true
+warn_return_any = true
+warn_redundant_casts = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+no_implicit_optional = true
+plugins = ["pydantic.mypy"]
+exclude = ["^migrations/", "^build/", "^dist/"]
+
+[[tool.mypy.overrides]]
+module = ["alembic.*", "passlib.*"]
+ignore_missing_imports = true
+
+[tool.coverage.run]
+source = ["src/kepler"]
+omit = ["*/migrations/*", "*/tests/*", "*/__main__.py"]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+fail_under = 70

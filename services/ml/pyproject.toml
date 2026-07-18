@@ -1,0 +1,105 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kepler-ml"
+version = "0.1.0"
+description = "Kepler Vision ML platform — training, evaluation, export, registry, serving"
+requires-python = ">=3.12"
+readme = "README.md"
+license = { text = "Proprietary" }
+authors = [{ name = "Kepler Vision" }]
+dependencies = [
+    "numpy>=2.1.0",
+    "scipy>=1.14.0",
+    "pandas>=2.2.0",
+    "pydantic>=2.9.0",
+    "pydantic-settings>=2.5.0",
+    "structlog>=24.4.0",
+    "orjson>=3.10.7",
+    "rasterio>=1.4.0",
+    "shapely>=2.0.6",
+    "pyproj>=3.7.0",
+    "Pillow>=11.0.0",
+    "albumentations>=1.4.0",
+    "tqdm>=4.66.0",
+    "mlflow>=2.16.0",
+    "wandb>=0.17.0",
+    "h5py>=3.11.0",
+    "pyyaml>=6.0.0",
+    "click>=8.1.7",
+    "rich>=13.7.0",
+    "typer>=0.12.0",
+    "onnx>=1.17.0",
+    "onnxruntime>=1.19.0",
+    "onnxslim>=0.1.46",
+    # PyTorch is intentionally a separate extra — see [extras]
+]
+
+[project.optional-dependencies]
+torch-cpu = [
+    "torch>=2.4.0",
+    "torchvision>=0.19.0",
+    "lightning>=2.4.0",
+    "torchmetrics>=1.5.0",
+]
+trt = [
+    "tensorrt>=10.4.0",
+    "pycuda>=2024.1",
+]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=5.0.0",
+    "mypy>=1.11.0",
+    "ruff>=0.7.0",
+    "freezegun>=1.5.0",
+    "faker>=30.0.0",
+]
+
+[project.scripts]
+kepler-ml = "kepler_ml.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["**/migrations/*"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM", "RUF", "ASYNC", "S", "TCH", "PTH", "ERA", "PL", "TRY"]
+ignore = ["E501", "B008", "TRY003", "PLR0913", "PLR2004", "S101", "S104", "S105", "S106"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S", "PLR0913", "PLR2004", "ARG", "FBT"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+no_implicit_optional = true
+plugins = ["pydantic.mypy"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["torch.*", "torchvision.*", "lightning.*", "tensorrt.*", "pycuda.*", "rasterio.*", "mlflow.*", "wandb.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra -q --strict-markers"
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["src/kepler_ml"]
+omit = ["*/tests/*", "*/__main__.py"]

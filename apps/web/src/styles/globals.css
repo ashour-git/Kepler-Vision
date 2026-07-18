@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 60 9% 6%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 60 9% 6%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 60 9% 6%;
+
+    --primary: 156 47% 23%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 60 5% 96%;
+    --secondary-foreground: 60 9% 6%;
+
+    --muted: 60 5% 96%;
+    --muted-foreground: 60 5% 25%;
+
+    --accent: 156 47% 92%;
+    --accent-foreground: 156 47% 18%;
+
+    --destructive: 4 70% 41%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 152 65% 31%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 31 88% 38%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 60 9% 90%;
+    --input: 60 9% 90%;
+    --ring: 156 47% 40%;
+  }
+
+  .dark {
+    --background: 0 0% 4%;
+    --foreground: 60 9% 93%;
+
+    --card: 0 0% 7%;
+    --card-foreground: 60 9% 93%;
+
+    --popover: 0 0% 7%;
+    --popover-foreground: 60 9% 93%;
+
+    --primary: 156 65% 60%;
+    --primary-foreground: 0 0% 4%;
+
+    --secondary: 0 0% 13%;
+    --secondary-foreground: 60 9% 93%;
+
+    --muted: 0 0% 13%;
+    --muted-foreground: 0 0% 70%;
+
+    --accent: 156 35% 14%;
+    --accent-foreground: 156 65% 75%;
+
+    --destructive: 4 80% 65%;
+    --destructive-foreground: 0 0% 4%;
+
+    --success: 152 65% 60%;
+    --success-foreground: 0 0% 4%;
+
+    --warning: 31 88% 60%;
+    --warning-foreground: 0 0% 4%;
+
+    --border: 0 0% 18%;
+    --input: 0 0% 18%;
+    --ring: 156 65% 60%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  /* Tabular numerals on all numeric content */
+  table,
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer utilities {
+  .focus-ring {
+    @apply outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+  }
+
+  /* P1.13: Reduced motion. If the user has set their OS to reduce motion,
+     neutralize decorative animations and transitions. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* P1.16: Density. Components can opt into denser layouts when the user
+     has chosen `compact` density. Default (comfortable) is the base. */
+  [data-density="compact"] .density-aware {
+    @apply py-1 text-xs;
+  }
+}
