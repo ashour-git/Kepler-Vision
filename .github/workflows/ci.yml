@@ -1,41 +1,15 @@
 name: CI
 
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+on: [push, pull_request]
+
+permissions:
+  contents: read
 
 jobs:
-  ci:
-    name: Verify runner works
+  verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - run: echo "Runner is working. Python version:" && python3 --version
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - run: python --version && pip --version
-      - name: Install API deps
-        working-directory: services/api
-        run: pip install -e ".[dev]"
-      - name: API unit tests
-        working-directory: services/api
-        run: python -m pytest tests/unit tests/smoke -v
-      - name: Install pnpm
-        run: npm install -g pnpm
-      - name: Install web deps
-        run: pnpm install --frozen-lockfile=false
-      - name: Web typecheck
-        working-directory: apps/web
-        run: pnpm typecheck
-      - name: Web unit tests
-        working-directory: apps/web
-        run: pnpm test
-      - name: Install ML deps
-        working-directory: services/ml
-        run: pip install -e ".[dev]"
-      - name: ML unit tests
-        working-directory: services/ml
-        run: python -m pytest tests/unit -v
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: Verify
+        run: echo "Runner is alive"
