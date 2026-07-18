@@ -1,9 +1,12 @@
 name: CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [main, ci-debug]
+  pull_request:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - run: echo "hello" && uname -a
+      - run: echo "CI is running on $(uname -a)"
