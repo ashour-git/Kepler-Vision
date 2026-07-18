@@ -1,5 +1,5 @@
 {
-  "services": {
+  "experimentalServices": {
     "web": {
       "root": "apps/web",
       "framework": "nextjs"
