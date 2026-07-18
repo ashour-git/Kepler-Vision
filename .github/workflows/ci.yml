@@ -2,14 +2,8 @@ name: CI
 
 on: [push, pull_request]
 
-permissions:
-  contents: read
-
 jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-      - name: Verify
-        run: echo "Runner is alive"
+      - run: echo "hello" && uname -a
