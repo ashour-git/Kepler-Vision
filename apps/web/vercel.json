@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "buildCommand": "cd ../.. && pnpm install --frozen-lockfile=false && cd apps/web && pnpm build",
+  "outputDirectory": ".next",
+  "installCommand": "cd ../.. && pnpm install --frozen-lockfile=false",
+  "env": {
+    "NEXT_PUBLIC_API_BASE_URL": "@kepler-api-url"
+  },
+  "github": {
+    "silent": true
+  }
+}
